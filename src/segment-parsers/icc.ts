@@ -10,6 +10,7 @@ const TAG_TYPE_DESC = 'desc'
 const TAG_TYPE_MLUC = 'mluc'
 const TAG_TYPE_TEXT = 'text'
 const TAG_TYPE_SIG  = 'sig '
+const TAG_TYPE_PARA = 'para'
 // TODO: other types 'mft2', 'XYZ '
 
 const EMPTY_VALUE = '\x00\x00\x00\x00'
@@ -87,6 +88,7 @@ export default class Icc extends AppSegmentParserBase {
 			case TAG_TYPE_MLUC: return this.parseMluc(offset)
 			case TAG_TYPE_TEXT: return this.parseText(offset, length)
 			case TAG_TYPE_SIG:  return this.parseSig(offset)
+		        case TAG_TYPE_PARA: return this.parsePara(offset)
 			// TODO: implement more types
 		}
 		if (offset + length > this.chunk.byteLength) {
@@ -132,6 +134,29 @@ export default class Icc extends AppSegmentParserBase {
 		else
 			return values
 	}
+
+        parsePara(offset) {
+                const {chunk} = this
+                const functionType = chunk.getUint16(offset + 8);
+                const g = parseS15Fixed16Number(chunk, offset + 12)
+                let a = 0, b = 0, c = 0, d = 0, e = 0, f = 0
+                if (functionType >= 1) {
+                        a = parseS15Fixed16Number(chunk, offset + 16)
+                        b = parseS15Fixed16Number(chunk, offset + 20)
+                }
+                if (functionType >= 2) {
+                        c = parseS15Fixed16Number(chunk, offset + 24)
+                }
+                if (functionType >= 3) {
+                        d = parseS15Fixed16Number(chunk, offset + 28)
+                }
+                if (functionType >= 4) {
+                        e = parseS15Fixed16Number(chunk, offset + 32)
+                        f = parseS15Fixed16Number(chunk, offset + 36)
+                }
+                const values = {functionType, g, a, b, c, d, e, f};
+                return values;
+        }
 
 	translateValue(val, tagEnum) {
 		if (typeof val === 'string')
@@ -179,6 +204,12 @@ function parseDate(view, offset) {
 	const minutes = view.getUint16(offset + 8)
 	const seconds = view.getUint16(offset + 10)
 	return new Date(Date.UTC(year, month, day, hours, minutes, seconds))
+}
+
+function parseS15Fixed16Number(view, offset) {
+        const integer = view.getInt16(offset)
+        const fractional = view.getUint16(offset + 2)
+        return integer + fractional / 65536
 }
 
 function concatChunks(chunks) {
